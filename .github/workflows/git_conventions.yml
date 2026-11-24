@@ -1,0 +1,40 @@
+name: Git conventions
+
+on:
+  push:
+    branches: [ "**" ]
+  pull_request:
+    types: [ opened, synchronize, reopened, edited ]
+
+permissions:
+  contents: read
+
+jobs:
+  git-conventions:
+    name: Check branch and commit names
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Check Git conventions
+        env:
+          PYSATL_BRANCH: ${{ github.head_ref || github.ref_name }}
+          PYSATL_COMMIT_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+          PYSATL_COMMIT_BASE: >-
+            ${{ github.event_name == 'pull_request'
+                && format('origin/{0}', github.base_ref)
+                || (github.ref_name == github.event.repository.default_branch
+                    && github.event.before
+                    || format('origin/{0}', github.event.repository.default_branch)) }}
+        run: python .github/scripts/check_git_conventions.py
